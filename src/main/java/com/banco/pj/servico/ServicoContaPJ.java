@@ -86,33 +86,20 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         ContaPJ conta = buscarAtiva(cnpj);
         BigDecimal v = valorPositivo(valor);
 
-        BigDecimal tarifa;
-        if (conta.getTipo() == TipoEmpresa.MEI) {
-            tarifa = BigDecimal.ZERO;
-        } else if (conta.getTipo() == TipoEmpresa.ME) {
-            tarifa = new BigDecimal("1.50");
-        } else if (conta.getTipo() == TipoEmpresa.EPP) {
-            tarifa = new BigDecimal("1.00");
-        } else if (conta.getTipo() == TipoEmpresa.LTDA) {
-            tarifa = new BigDecimal("0.50");
-        } else {
-            tarifa = BigDecimal.ZERO;
-        }
+        BigDecimal tarifa = BigDecimal.ZERO;
+        tarifa = DeterminarTarifa.executarTarifaOperacao(conta, tarifa);
         tarifa = normalizar(tarifa);
 
         BigDecimal total = v.add(tarifa);
-        BigDecimal disponivel = conta.getSaldo().add(conta.getLimiteChequeEspecial());
-        if (total.compareTo(disponivel) > 0) {
-            throw new SaldoInsuficienteException("Saldo insuficiente para saque");
-        }
+        conta.validarSaldo(total);
+        conta.debitar(v);
+        conta.registrarLancamento("SAQUE", "Saque em conta", v);
 
-        conta.setSaldo(conta.getSaldo().subtract(v));
-        conta.getLancamentos().add(new Lancamento("SAQUE", "Saque em conta", v));
         if (tarifa.signum() > 0) {
-            conta.setSaldo(conta.getSaldo().subtract(tarifa));
-            conta.getLancamentos().add(new Lancamento("TARIFA", "Tarifa de saque", tarifa));
+            conta.debitar(tarifa);
+            conta.registrarLancamento("TARIFA", "Tarifa de saque", tarifa);
         }
-        auditoria.add("SAQUE|" + conta.getCnpj() + "|" + v.toPlainString());
+        auditoriaObject.registrar("SAQUE|" + conta.getCnpj() + "|" + v.toPlainString());
     }
 
     @Override
@@ -383,24 +370,14 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     public BigDecimal cobrarTarifaMensal(String cnpj) {
         ContaPJ conta = buscarAtiva(cnpj);
 
-        BigDecimal tarifa;
-        if (conta.getTipo() == TipoEmpresa.MEI) {
-            tarifa = BigDecimal.ZERO;
-        } else if (conta.getTipo() == TipoEmpresa.ME) {
-            tarifa = new BigDecimal("29.90");
-        } else if (conta.getTipo() == TipoEmpresa.EPP) {
-            tarifa = new BigDecimal("49.90");
-        } else if (conta.getTipo() == TipoEmpresa.LTDA) {
-            tarifa = new BigDecimal("79.90");
-        } else {
-            tarifa = new BigDecimal("149.90");
-        }
+        BigDecimal tarifa = BigDecimal.ZERO;
+        tarifa = DeterminarTarifa.executarTarifaMensal(conta, tarifa);
         tarifa = normalizar(tarifa);
 
         if (tarifa.signum() > 0) {
-            conta.setSaldo(conta.getSaldo().subtract(tarifa));
-            conta.getLancamentos().add(new Lancamento("TARIFA", "Tarifa mensal de manutencao", tarifa));
-            auditoria.add("TARIFA_MENSAL|" + conta.getCnpj() + "|" + tarifa.toPlainString());
+            conta.debitar(tarifa);
+            conta.registrarLancamento("TARIFA", "Tarifa mensal de manutencao", tarifa);
+            auditoriaObject.registrar("TARIFA_MENSAL|" + conta.getCnpj() + "|" + tarifa.toPlainString());
         }
         return tarifa;
     }

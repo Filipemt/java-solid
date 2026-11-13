@@ -21,6 +21,17 @@ public class ContaPJ {
         lancamentos.add(new Lancamento(tipo, descricao, valor));
     }
 
+    public void debitar(BigDecimal valor) {
+        saldo = saldo.subtract(valor);
+    }
+
+    public void validarSaldo(BigDecimal valor) {
+        BigDecimal disponivel = saldo.add(limiteChequeEspecial);
+        if (valor.compareTo(disponivel) > 0) {
+            throw new SaldoInsuficienteException("Saldo insuficiente para a operação");
+        }
+    }
+
     public ContaPJ(String cnpj) {
         this.cnpj = cnpj;
     }
