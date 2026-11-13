@@ -39,7 +39,7 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         if (deposito.signum() > 0) {
             conta.registrarLancamento("DEPOSITO", "Deposito inicial", deposito);
         }
-        
+
         repositorio.salvar(conta);
         auditoriaObject.registrar("ABERTURA_CONTA|" + conta.getCnpj() + "|" + conta.getTipo());
         email.enviar(emailContato, "Bem-vindo ao Banco PJ", "Conta aberta para " + conta.getRazaoSocial());
@@ -53,7 +53,7 @@ public class ServicoContaPJ implements OperacoesContaPJ {
             throw new OperacaoInvalidaException("Conta com saldo diferente de zero nao pode ser encerrada");
         }
         conta.setAtiva(false);
-        auditoria.add("ENCERRAMENTO_CONTA|" + conta.getCnpj());
+        auditoriaObject.registrar("ENCERRAMENTO_CONTA|" + conta.getCnpj());
         email.enviar(conta.getEmail(), "Conta encerrada", "Sua conta foi encerrada");
     }
 
