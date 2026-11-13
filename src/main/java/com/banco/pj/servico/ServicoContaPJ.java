@@ -72,11 +72,11 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         BigDecimal v = valorPositivo(valor);
 
         conta.setSaldo(conta.getSaldo().add(v));
-        conta.getLancamentos().add(new Lancamento("DEPOSITO", "Deposito em conta", v));
-        auditoria.add("DEPOSITO|" + conta.getCnpj() + "|" + v.toPlainString());
+        conta.registrarLancamento("DEPOSITO", "Deposito em conta", v);
+        auditoriaObject.registrar("DEPOSITO|" + conta.getCnpj() + "|" + v.toPlainString());
 
         if (v.compareTo(new BigDecimal("10000.00")) >= 0) {
-            auditoria.add("ALERTA_COAF|" + conta.getCnpj() + "|" + v.toPlainString());
+            auditoriaObject.registrar("ALERTA_COAF|" + conta.getCnpj() + "|" + v.toPlainString());
             sms.enviar(conta.getTelefone(), "Deposito de R$ " + v.toPlainString() + " identificado");
         }
     }
@@ -418,7 +418,7 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     }
 
     public List<String> getAuditoria() {
-        return auditoria;
+        return auditoriaObject.getAuditorias();
     }
 
     // ------------------------------------------------------------------
