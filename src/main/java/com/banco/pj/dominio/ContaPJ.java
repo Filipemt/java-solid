@@ -17,6 +17,10 @@ public class ContaPJ {
     private final List<Lancamento> lancamentos = new ArrayList<>();
     private final List<Emprestimo> emprestimos = new ArrayList<>();
 
+    public void registrarLancamento(String tipo, String descricao, BigDecimal valor) {
+        lancamentos.add(new Lancamento(tipo, descricao, valor));
+    }
+
     public ContaPJ(String cnpj) {
         this.cnpj = cnpj;
     }

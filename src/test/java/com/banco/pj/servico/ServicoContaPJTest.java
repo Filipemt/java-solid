@@ -1,10 +1,7 @@
 package com.banco.pj.servico;
 
-import com.banco.pj.dominio.ContaNaoEncontradaException;
-import com.banco.pj.dominio.Emprestimo;
-import com.banco.pj.dominio.OperacaoInvalidaException;
-import com.banco.pj.dominio.SaldoInsuficienteException;
-import com.banco.pj.dominio.TipoEmpresa;
+import com.banco.pj.dominio.*;
+import com.banco.pj.infra.RepositorioContasEmMemoria;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -37,7 +34,11 @@ class ServicoContaPJTest {
     }
 
     ServicoContaPJ criarServico() {
-        return new ServicoContaPJ();
+        RepositorioContasEmMemoria repositorio = new RepositorioContasEmMemoria();
+        AberturaContaValidador validador = new AberturaContaValidador(repositorio);
+        Auditoria auditoria = new Auditoria();
+
+        return new ServicoContaPJ(validador, repositorio, auditoria);
     }
 
     // ---------------- helpers ----------------

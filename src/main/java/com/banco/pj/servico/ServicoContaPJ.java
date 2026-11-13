@@ -1,17 +1,7 @@
 package com.banco.pj.servico;
 
-import com.banco.pj.dominio.ContaMEI;
-import com.banco.pj.dominio.ContaNaoEncontradaException;
-import com.banco.pj.dominio.ContaPJ;
-import com.banco.pj.dominio.Emprestimo;
-import com.banco.pj.dominio.Lancamento;
-import com.banco.pj.dominio.OperacaoInvalidaException;
-import com.banco.pj.dominio.SaldoInsuficienteException;
-import com.banco.pj.dominio.TipoEmpresa;
-import com.banco.pj.infra.EnviadorEmail;
-import com.banco.pj.infra.EnviadorSms;
-import com.banco.pj.infra.RepositorioContasEmMemoria;
-import com.banco.pj.infra.ValidadorCnpj;
+import com.banco.pj.dominio.*;
+import com.banco.pj.infra.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -20,94 +10,38 @@ import java.util.List;
 
 public class ServicoContaPJ implements OperacoesContaPJ {
 
-    private final RepositorioContasEmMemoria repositorio = new RepositorioContasEmMemoria();
+    private final RepositorioContasEmMemoria repositorio;
+
     private final EnviadorEmail email = new EnviadorEmail();
     private final EnviadorSms sms = new EnviadorSms();
     private final List<String> auditoria = new ArrayList<>();
 
+    private final AberturaContaValidador contaValidador;
+    private final Auditoria auditoriaObject;
+
+    public ServicoContaPJ(AberturaContaValidador contaValidador, RepositorioContasEmMemoria repositorio, Auditoria auditoriaObject) {
+        this.contaValidador = contaValidador;
+        this.repositorio = repositorio;
+        this.auditoriaObject = auditoriaObject;
+    }
     // ------------------------------------------------------------------
     // Abertura / encerramento
     // ------------------------------------------------------------------
 
     @Override
     public ContaPJ abrirConta(String cnpj, String razaoSocial, TipoEmpresa tipo, String emailContato, String telefone, BigDecimal depositoInicial) {
-        if (!ValidadorCnpj.isValido(cnpj)) {
-            throw new OperacaoInvalidaException("CNPJ invalido");
-        }
+        contaValidador.validar(cnpj, razaoSocial, tipo, emailContato, depositoInicial);
         String cnpjLimpo = ValidadorCnpj.somenteDigitos(cnpj);
-        if (razaoSocial == null || razaoSocial.trim().isEmpty()) {
-            throw new OperacaoInvalidaException("Razao social obrigatoria");
-        }
-        if (tipo == null) {
-            throw new OperacaoInvalidaException("Tipo de empresa obrigatorio");
-        }
-        if (emailContato == null || !emailContato.contains("@")) {
-            throw new OperacaoInvalidaException("Email invalido");
-        }
-        if (repositorio.existe(cnpjLimpo)) {
-            throw new OperacaoInvalidaException("Ja existe conta para este CNPJ");
-        }
 
-        BigDecimal deposito = depositoInicial == null
-                ? BigDecimal.ZERO.setScale(2)
-                : depositoInicial.setScale(2, RoundingMode.HALF_UP);
-        if (deposito.signum() < 0) {
-            throw new OperacaoInvalidaException("Deposito inicial invalido");
-        }
-
-        BigDecimal depositoMinimo;
-        switch (tipo) {
-            case SA:
-                depositoMinimo = new BigDecimal("10000.00");
-                break;
-            case LTDA:
-                depositoMinimo = new BigDecimal("1000.00");
-                break;
-            case EPP:
-                depositoMinimo = new BigDecimal("500.00");
-                break;
-            default:
-                depositoMinimo = BigDecimal.ZERO;
-        }
-        if (deposito.compareTo(depositoMinimo) < 0) {
-            throw new OperacaoInvalidaException("Deposito inicial abaixo do minimo para o tipo de empresa");
-        }
-
-        ContaPJ conta;
-        if (tipo == TipoEmpresa.MEI) {
-            conta = new ContaMEI(cnpjLimpo);
-        } else {
-            conta = new ContaPJ(cnpjLimpo);
-        }
-        conta.setRazaoSocial(razaoSocial.trim());
-        conta.setTipo(tipo);
-        conta.setEmail(emailContato);
-        conta.setTelefone(telefone);
-
-        switch (tipo) {
-            case MEI:
-                break;
-            case ME:
-                conta.setLimiteChequeEspecial(new BigDecimal("5000.00"));
-                break;
-            case EPP:
-                conta.setLimiteChequeEspecial(new BigDecimal("20000.00"));
-                break;
-            case LTDA:
-                conta.setLimiteChequeEspecial(new BigDecimal("50000.00"));
-                break;
-            case SA:
-                conta.setLimiteChequeEspecial(new BigDecimal("200000.00"));
-                break;
-        }
-
-        conta.setSaldo(deposito);
+        BigDecimal deposito = depositoInicial.setScale(2, RoundingMode.HALF_UP);
+        ContaPJ conta = AberturaContaPjCriacao.criar(tipo, cnpjLimpo, razaoSocial, emailContato, telefone, deposito);
+        AberturaContaPjConfiguracao.configurarConta(tipo, conta);
         if (deposito.signum() > 0) {
-            conta.getLancamentos().add(new Lancamento("DEPOSITO", "Deposito inicial", deposito));
+            conta.registrarLancamento("DEPOSITO", "Deposito inicial", deposito);
         }
-
+        
         repositorio.salvar(conta);
-        auditoria.add("ABERTURA_CONTA|" + cnpjLimpo + "|" + tipo);
+        auditoriaObject.registrar("ABERTURA_CONTA|" + conta.getCnpj() + "|" + conta.getTipo());
         email.enviar(emailContato, "Bem-vindo ao Banco PJ", "Conta aberta para " + conta.getRazaoSocial());
         return conta;
     }

@@ -1,14 +1,20 @@
 package com.banco.pj;
 
+import com.banco.pj.dominio.Auditoria;
 import com.banco.pj.dominio.TipoEmpresa;
+import com.banco.pj.servico.AberturaContaValidador;
+import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.servico.ServicoContaPJ;
 
 import java.math.BigDecimal;
 
 public class App {
-
     public static void main(String[] args) {
-        ServicoContaPJ servico = new ServicoContaPJ();
+        RepositorioContasEmMemoria repositorio = new RepositorioContasEmMemoria();
+        AberturaContaValidador aberturaContaValidador = new AberturaContaValidador(repositorio);
+        Auditoria auditoriaObject = new Auditoria();
+
+        ServicoContaPJ servico = new ServicoContaPJ(aberturaContaValidador, repositorio, auditoriaObject);
 
         servico.abrirConta("11.444.777/0001-61", "Padaria Pao Quente", TipoEmpresa.ME,
                 "contato@paoquente.com.br", "61999990000", new BigDecimal("15000.00"));
