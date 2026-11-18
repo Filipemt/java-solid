@@ -173,15 +173,17 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         tarifa = normalizar(tarifa);
 
         conta.validarSaldo(valoredPositivo.add(tarifa));
-        conta.debitar(valoredPositivo);
-        conta.registrarLancamento("BOLETO", "Pagamento de boleto", valoredPositivo);
+
         efetivarPagamentoBoleto(tarifa, conta, "Tarifa de boleto", "BOLETO|", valoredPositivo);
     }
 
-    private void efetivarPagamentoBoleto(BigDecimal tarifa, ContaPJ conta, String Tarifa_de_boleto, String x, BigDecimal valoredPositivo) {
+    private void efetivarPagamentoBoleto(BigDecimal tarifa, ContaPJ conta, String tipoTarifa, String x, BigDecimal valoredPositivo) {
+        conta.debitar(valoredPositivo);
+        conta.registrarLancamento("BOLETO", "Pagamento de boleto", valoredPositivo);
+
         if (tarifa.signum() > 0) {
             conta.debitar(tarifa);
-            conta.registrarLancamento("TARIFA", Tarifa_de_boleto, tarifa);
+            conta.registrarLancamento("TARIFA", tipoTarifa, tarifa);
         }
         auditoriaObject.registrar(x + conta.getCnpj() + "|" + valoredPositivo.toPlainString());
     }
