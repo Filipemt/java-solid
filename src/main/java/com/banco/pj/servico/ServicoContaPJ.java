@@ -104,110 +104,92 @@ public class ServicoContaPJ implements OperacoesContaPJ {
 
     @Override
     public void transferir(String cnpjOrigem, String cnpjDestino, BigDecimal valor, String tipoTransferencia) {
-        BigDecimal v = valorPositivo(valor);
-        if (tipoTransferencia == null) {
-            throw new OperacaoInvalidaException("Tipo de transferencia obrigatorio");
-        }
+        BigDecimal valoredPositivo = validarTipoTransferencia(valor, tipoTransferencia);
         String tipo = tipoTransferencia.trim().toUpperCase();
-
         ContaPJ origem = buscarAtiva(cnpjOrigem);
         ContaPJ destino = buscarAtiva(cnpjDestino);
+
         if (origem.getCnpj().equals(destino.getCnpj())) {
             throw new OperacaoInvalidaException("Origem e destino iguais");
         }
 
-        if (v.compareTo(new BigDecimal("1000000.00")) > 0) {
-            auditoria.add("FRAUDE_SUSPEITA|" + origem.getCnpj() + "|" + v.toPlainString());
+        validarAntiFraude(valoredPositivo, origem);
+        BigDecimal tarifa = obterTarifaTransferencia(tipoTransferencia, tipo, origem, valoredPositivo);
+        tarifa = normalizar(tarifa);
+        origem.validarSaldo(valoredPositivo.add(tarifa));
+        efetivarTransferencia(origem, valoredPositivo, tipo, destino, tarifa);
+        notificarTransferenciaLimiteAcima(valoredPositivo, origem);
+    }
+
+    private void notificarTransferenciaLimiteAcima(BigDecimal valoredPositivo, ContaPJ origem) {
+        if (valoredPositivo.compareTo(new BigDecimal("50000.00")) >= 0) {
+            sms.enviar(origem.getTelefone(), "Transferencia de R$ " + valoredPositivo.toPlainString() + " realizada");
+        }
+    }
+
+    private void efetivarTransferencia(ContaPJ origem, BigDecimal valoredPositivo, String tipo, ContaPJ destino, BigDecimal tarifa) {
+        origem.debitar(valoredPositivo);
+        origem.registrarLancamento("TRANSFERENCIA_ENVIADA", tipo + " para " + destino.getCnpj(), valoredPositivo);
+        if (tarifa.signum() > 0) {
+            origem.debitar(tarifa);
+            origem.registrarLancamento("TARIFA", "Tarifa de " + tipo, tarifa);
+        }
+        destino.creditar(valoredPositivo);
+        destino.registrarLancamento("TRANSFERENCIA_RECEBIDA", tipo + " de " + origem.getCnpj(), valoredPositivo);
+        auditoriaObject.registrar("TRANSFERENCIA|" + tipo + "|" + origem.getCnpj() + "|" + destino.getCnpj() + "|" + valoredPositivo.toPlainString());
+    }
+
+    private static BigDecimal obterTarifaTransferencia(String tipoTransferencia, String tipo, ContaPJ origem, BigDecimal valoredPositivo) {
+        return switch (tipo) {
+            case "PIX" -> DeterminarTarifa.executarTarifaPix(origem, valoredPositivo);
+            case "TED" -> DeterminarTarifa.executarTarifaTed(origem);
+            case "INTERNA" -> BigDecimal.ZERO;
+            default -> throw new OperacaoInvalidaException("Tipo de transferencia desconhecido: " + tipoTransferencia);
+        };
+    }
+
+    private void validarAntiFraude(BigDecimal valoredPositivo, ContaPJ origem) {
+        if (valoredPositivo.compareTo(new BigDecimal("1000000.00")) > 0) {
+            auditoriaObject.registrar("FRAUDE_SUSPEITA|" + origem.getCnpj() + "|" + valoredPositivo.toPlainString());
             throw new OperacaoInvalidaException("Transferencia bloqueada para analise antifraude");
         }
+    }
 
-        BigDecimal tarifa;
-        if (tipo.equals("PIX")) {
-            BigDecimal limitePix;
-            if (origem.getTipo() == TipoEmpresa.MEI) {
-                limitePix = new BigDecimal("5000.00");
-            } else if (origem.getTipo() == TipoEmpresa.ME) {
-                limitePix = new BigDecimal("20000.00");
-            } else if (origem.getTipo() == TipoEmpresa.EPP) {
-                limitePix = new BigDecimal("50000.00");
-            } else if (origem.getTipo() == TipoEmpresa.LTDA) {
-                limitePix = new BigDecimal("100000.00");
-            } else {
-                limitePix = new BigDecimal("500000.00");
-            }
-            if (v.compareTo(limitePix) > 0) {
-                throw new OperacaoInvalidaException("Valor acima do limite de PIX");
-            }
-            tarifa = BigDecimal.ZERO;
-        } else if (tipo.equals("TED")) {
-            if (origem.getTipo() == TipoEmpresa.MEI) {
-                tarifa = new BigDecimal("4.75");
-            } else if (origem.getTipo() == TipoEmpresa.ME || origem.getTipo() == TipoEmpresa.EPP) {
-                tarifa = new BigDecimal("9.50");
-            } else if (origem.getTipo() == TipoEmpresa.LTDA) {
-                tarifa = new BigDecimal("8.00");
-            } else {
-                tarifa = new BigDecimal("6.00");
-            }
-        } else if (tipo.equals("INTERNA")) {
-            tarifa = BigDecimal.ZERO;
-        } else {
-            throw new OperacaoInvalidaException("Tipo de transferencia desconhecido: " + tipoTransferencia);
+    private BigDecimal validarTipoTransferencia(BigDecimal valor, String tipoTransferencia) {
+        BigDecimal valoredPositivo = valorPositivo(valor);
+        if (tipoTransferencia == null) {
+            throw new OperacaoInvalidaException("Tipo de transferencia obrigatorio");
         }
-        tarifa = normalizar(tarifa);
-
-        BigDecimal total = v.add(tarifa);
-        BigDecimal disponivel = origem.getSaldo().add(origem.getLimiteChequeEspecial());
-        if (total.compareTo(disponivel) > 0) {
-            throw new SaldoInsuficienteException("Saldo insuficiente para transferencia");
-        }
-
-        origem.setSaldo(origem.getSaldo().subtract(v));
-        origem.getLancamentos().add(new Lancamento("TRANSFERENCIA_ENVIADA", tipo + " para " + destino.getCnpj(), v));
-        if (tarifa.signum() > 0) {
-            origem.setSaldo(origem.getSaldo().subtract(tarifa));
-            origem.getLancamentos().add(new Lancamento("TARIFA", "Tarifa de " + tipo, tarifa));
-        }
-        destino.setSaldo(destino.getSaldo().add(v));
-        destino.getLancamentos().add(new Lancamento("TRANSFERENCIA_RECEBIDA", tipo + " de " + origem.getCnpj(), v));
-        auditoria.add("TRANSFERENCIA|" + tipo + "|" + origem.getCnpj() + "|" + destino.getCnpj() + "|" + v.toPlainString());
-
-        if (v.compareTo(new BigDecimal("50000.00")) >= 0) {
-            sms.enviar(origem.getTelefone(), "Transferencia de R$ " + v.toPlainString() + " realizada");
-        }
+        return valoredPositivo;
     }
 
     @Override
     public void pagarBoleto(String cnpj, String codigoBarras, BigDecimal valor) {
         ContaPJ conta = buscarAtiva(cnpj);
-        BigDecimal v = valorPositivo(valor);
+        BigDecimal valoredPositivo = valorPositivo(valor);
+        validarCodigoBarra(codigoBarras);
+
+        BigDecimal tarifa = DeterminarTarifa.executarTarifaBoleto(conta);
+        tarifa = normalizar(tarifa);
+
+        conta.validarSaldo(valoredPositivo.add(tarifa));
+        conta.debitar(valoredPositivo);
+        conta.registrarLancamento("BOLETO", "Pagamento de boleto", valoredPositivo);
+        efetivarPagamentoBoleto(tarifa, conta, "Tarifa de boleto", "BOLETO|", valoredPositivo);
+    }
+
+    private void efetivarPagamentoBoleto(BigDecimal tarifa, ContaPJ conta, String Tarifa_de_boleto, String x, BigDecimal valoredPositivo) {
+        if (tarifa.signum() > 0) {
+            conta.debitar(tarifa);
+            conta.registrarLancamento("TARIFA", Tarifa_de_boleto, tarifa);
+        }
+        auditoriaObject.registrar(x + conta.getCnpj() + "|" + valoredPositivo.toPlainString());
+    }
+
+    private static void validarCodigoBarra(String codigoBarras) {
         if (codigoBarras == null || !codigoBarras.matches("\\d{44}")) {
             throw new OperacaoInvalidaException("Codigo de barras invalido");
         }
-
-        BigDecimal tarifa;
-        if (conta.getTipo() == TipoEmpresa.MEI) {
-            tarifa = BigDecimal.ZERO;
-        } else if (conta.getTipo() == TipoEmpresa.SA) {
-            tarifa = new BigDecimal("1.00");
-        } else {
-            tarifa = new BigDecimal("2.00");
-        }
-        tarifa = normalizar(tarifa);
-
-        BigDecimal total = v.add(tarifa);
-        BigDecimal disponivel = conta.getSaldo().add(conta.getLimiteChequeEspecial());
-        if (total.compareTo(disponivel) > 0) {
-            throw new SaldoInsuficienteException("Saldo insuficiente para pagamento de boleto");
-        }
-
-        conta.setSaldo(conta.getSaldo().subtract(v));
-        conta.getLancamentos().add(new Lancamento("BOLETO", "Pagamento de boleto", v));
-        if (tarifa.signum() > 0) {
-            conta.setSaldo(conta.getSaldo().subtract(tarifa));
-            conta.getLancamentos().add(new Lancamento("TARIFA", "Tarifa de boleto", tarifa));
-        }
-        auditoria.add("BOLETO|" + conta.getCnpj() + "|" + v.toPlainString());
     }
 
     // ------------------------------------------------------------------

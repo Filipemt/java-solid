@@ -21,8 +21,14 @@ public class ContaPJ {
         lancamentos.add(new Lancamento(tipo, descricao, valor));
     }
 
-    public void debitar(BigDecimal valor) {
+    public BigDecimal debitar(BigDecimal valor) {
         saldo = saldo.subtract(valor);
+        return valor;
+    }
+
+    public BigDecimal creditar(BigDecimal valor) {
+        saldo = saldo.add(valor);
+        return valor;
     }
 
     public void validarSaldo(BigDecimal valor) {
