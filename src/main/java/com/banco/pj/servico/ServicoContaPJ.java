@@ -1,6 +1,7 @@
 package com.banco.pj.servico;
 
 import com.banco.pj.dominio.*;
+import com.banco.pj.dominio.CondicoesEmprestimo;
 import com.banco.pj.infra.*;
 
 import java.math.BigDecimal;
@@ -201,55 +202,33 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     @Override
     public Emprestimo solicitarEmprestimo(String cnpj, BigDecimal valor, int meses) {
         ContaPJ conta = buscarAtiva(cnpj);
-        BigDecimal v = valorPositivo(valor);
-        if (meses < 1 || meses > 60) {
-            throw new OperacaoInvalidaException("Prazo deve ser entre 1 e 60 meses");
-        }
+        BigDecimal valoredPositivo = valorPositivo(valor);
+        validarPrazoEmprestimo(meses);
 
-        BigDecimal valorMaximo;
-        BigDecimal taxa;
-        int bonusTipo;
-        int maxEmprestimos;
-        switch (conta.getTipo()) {
-            case MEI:
-                valorMaximo = new BigDecimal("20000.00");
-                taxa = new BigDecimal("0.035");
-                bonusTipo = 0;
-                maxEmprestimos = 1;
-                break;
-            case ME:
-                valorMaximo = new BigDecimal("100000.00");
-                taxa = new BigDecimal("0.028");
-                bonusTipo = 50;
-                maxEmprestimos = 3;
-                break;
-            case EPP:
-                valorMaximo = new BigDecimal("500000.00");
-                taxa = new BigDecimal("0.022");
-                bonusTipo = 100;
-                maxEmprestimos = 3;
-                break;
-            case LTDA:
-                valorMaximo = new BigDecimal("2000000.00");
-                taxa = new BigDecimal("0.018");
-                bonusTipo = 150;
-                maxEmprestimos = 3;
-                break;
-            default:
-                valorMaximo = new BigDecimal("10000000.00");
-                taxa = new BigDecimal("0.012");
-                bonusTipo = 250;
-                maxEmprestimos = 3;
-        }
+        CondicoesEmprestimo condicoes = CondicoesEmprestimo.paraTipoEmpresa(conta.getTipo());
+        validarElegibilidade(valoredPositivo, condicoes, conta);
+        validarScore(condicoes, conta);
 
-        if (v.compareTo(valorMaximo) > 0) {
-            throw new OperacaoInvalidaException("Valor acima do maximo para o tipo de empresa");
-        }
-        if (conta.getEmprestimos().size() >= maxEmprestimos) {
-            throw new OperacaoInvalidaException("Limite de emprestimos ativos atingido");
-        }
+        Emprestimo emprestimo = Emprestimo.calcular(valoredPositivo, meses, condicoes.taxa());
+        efetivarEmprestimo(meses, conta, emprestimo, valoredPositivo);
 
-        int score = 500 + bonusTipo;
+        notificarEmprestimoAprovado(conta, valoredPositivo);
+        return emprestimo;
+    }
+
+    private void notificarEmprestimoAprovado(ContaPJ conta, BigDecimal valoredPositivo) {
+        email.enviar(conta.getEmail(), "Emprestimo aprovado", "Valor liberado: " + valoredPositivo.toPlainString());
+    }
+
+    private void efetivarEmprestimo(int meses, ContaPJ conta, Emprestimo emprestimo, BigDecimal valoredPositivo) {
+        conta.getEmprestimos().add(emprestimo);
+        conta.creditar(valoredPositivo);
+        conta.registrarLancamento("EMPRESTIMO", "Credito de emprestimo", valoredPositivo);
+        auditoriaObject.registrar("EMPRESTIMO|" + conta.getCnpj() + "|" + valoredPositivo.toPlainString() + "|" + meses);
+    }
+
+    private static void validarScore(CondicoesEmprestimo condicoes, ContaPJ conta) {
+        int score = 500 + condicoes.bonusTipo();
         if (conta.getSaldo().signum() > 0) {
             int bonusSaldo = conta.getSaldo().divide(new BigDecimal("1000"), 0, RoundingMode.DOWN).intValue();
             score += Math.min(bonusSaldo, 200);
@@ -259,18 +238,21 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         if (score < 600) {
             throw new OperacaoInvalidaException("Credito negado: score insuficiente (" + score + ")");
         }
+    }
 
-        BigDecimal fator = BigDecimal.ONE.add(taxa.multiply(BigDecimal.valueOf(meses)));
-        BigDecimal total = normalizar(v.multiply(fator));
-        BigDecimal parcela = total.divide(BigDecimal.valueOf(meses), 2, RoundingMode.HALF_UP);
+    private static void validarElegibilidade(BigDecimal v, CondicoesEmprestimo condicoes, ContaPJ conta) {
+        if (v.compareTo(condicoes.valorMaximo()) > 0) {
+            throw new OperacaoInvalidaException("Valor acima do maximo para o tipo de empresa");
+        }
+        if (conta.getEmprestimos().size() >= condicoes.maxEmprestimos()) {
+            throw new OperacaoInvalidaException("Limite de emprestimos ativos atingido");
+        }
+    }
 
-        Emprestimo emprestimo = new Emprestimo(v, meses, taxa, parcela, total);
-        conta.getEmprestimos().add(emprestimo);
-        conta.setSaldo(conta.getSaldo().add(v));
-        conta.getLancamentos().add(new Lancamento("EMPRESTIMO", "Credito de emprestimo", v));
-        auditoria.add("EMPRESTIMO|" + conta.getCnpj() + "|" + v.toPlainString() + "|" + meses);
-        email.enviar(conta.getEmail(), "Emprestimo aprovado", "Valor liberado: " + v.toPlainString());
-        return emprestimo;
+    private static void validarPrazoEmprestimo(int meses) {
+        if (meses < 1 || meses > 60) {
+            throw new OperacaoInvalidaException("Prazo deve ser entre 1 e 60 meses");
+        }
     }
 
     @Override
