@@ -7,6 +7,8 @@ import com.banco.pj.dominio.enums.TipoEmpresa;
 import java.math.BigDecimal;
 
 public class DeterminarTarifa {
+    private DeterminarTarifa() {}
+
 
     public static BigDecimal executarTarifaMensal(ContaPJ conta, BigDecimal tarifa) {
         if (conta.getTipo() == TipoEmpresa.MEI) {

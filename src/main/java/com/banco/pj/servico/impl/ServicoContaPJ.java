@@ -19,7 +19,6 @@ public class ServicoContaPJ implements OperacoesContaPJ {
 
     private final EnviadorEmail email = new EnviadorEmail();
     private final EnviadorSms sms = new EnviadorSms();
-    private final List<String> auditoria = new ArrayList<>();
 
     private final AberturaContaValidador contaValidador;
     private final Auditoria auditoriaObject;
@@ -262,31 +261,42 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     @Override
     public void solicitarAumentoLimite(String cnpj, BigDecimal novoLimite) {
         ContaPJ conta = buscarAtiva(cnpj);
+        validarContaElegivelAChequeEspecial(conta);
+        BigDecimal limite = validarNovoLimite(novoLimite, conta);
+        CondicoesLimiteChequeEspecial condicoes = CondicoesLimiteChequeEspecial.paraTipoEmpresa(conta.getTipo());
+        validarLimiteMaximo(limite, condicoes);
+
+        efetivarAumentoLimite(conta, limite);
+        notificarLimiteAlterado(conta, limite);
+    }
+
+    private void efetivarAumentoLimite(ContaPJ conta, BigDecimal limite) {
+        conta.setLimiteChequeEspecial(limite);
+        auditoriaObject.registrar("AUMENTO_LIMITE|" + conta.getCnpj() + "|" + limite.toPlainString());
+    }
+
+    private void notificarLimiteAlterado(ContaPJ conta, BigDecimal limite) {
+        email.enviar(conta.getEmail(), "Limite alterado", "Novo limite: " + limite.toPlainString());
+    }
+
+    private static void validarContaElegivelAChequeEspecial(ContaPJ conta) {
         if (conta instanceof ContaMEI) {
             throw new OperacaoInvalidaException("Conta MEI nao possui cheque especial");
         }
+    }
+
+    private BigDecimal validarNovoLimite(BigDecimal novoLimite, ContaPJ conta) {
         BigDecimal limite = valorPositivo(novoLimite);
         if (limite.compareTo(conta.getLimiteChequeEspecial()) <= 0) {
             throw new OperacaoInvalidaException("Novo limite deve ser maior que o atual");
         }
+        return limite;
+    }
 
-        BigDecimal maximo;
-        if (conta.getTipo() == TipoEmpresa.ME) {
-            maximo = new BigDecimal("20000.00");
-        } else if (conta.getTipo() == TipoEmpresa.EPP) {
-            maximo = new BigDecimal("80000.00");
-        } else if (conta.getTipo() == TipoEmpresa.LTDA) {
-            maximo = new BigDecimal("200000.00");
-        } else {
-            maximo = new BigDecimal("1000000.00");
-        }
-        if (limite.compareTo(maximo) > 0) {
+    private static void validarLimiteMaximo(BigDecimal limite, CondicoesLimiteChequeEspecial condicoes) {
+        if (limite.compareTo(condicoes.limiteMaximo()) > 0) {
             throw new OperacaoInvalidaException("Limite acima do maximo permitido");
         }
-
-        conta.setLimiteChequeEspecial(limite);
-        auditoria.add("AUMENTO_LIMITE|" + conta.getCnpj() + "|" + limite.toPlainString());
-        email.enviar(conta.getEmail(), "Limite alterado", "Novo limite: " + limite.toPlainString());
     }
 
     // ------------------------------------------------------------------
