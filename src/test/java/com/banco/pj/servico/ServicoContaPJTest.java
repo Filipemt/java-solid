@@ -1,7 +1,14 @@
 package com.banco.pj.servico;
 
 import com.banco.pj.dominio.*;
+import com.banco.pj.dominio.enums.TipoEmpresa;
+import com.banco.pj.dominio.exceptions.ContaNaoEncontradaException;
+import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
+import com.banco.pj.dominio.exceptions.SaldoInsuficienteException;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
+import com.banco.pj.servico.impl.AberturaContaValidador;
+import com.banco.pj.servico.impl.CaixaEletronicoPJ;
+import com.banco.pj.servico.impl.ServicoContaPJ;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

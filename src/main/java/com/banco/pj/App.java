@@ -1,10 +1,10 @@
 package com.banco.pj;
 
 import com.banco.pj.dominio.Auditoria;
-import com.banco.pj.dominio.TipoEmpresa;
-import com.banco.pj.servico.AberturaContaValidador;
+import com.banco.pj.dominio.enums.TipoEmpresa;
+import com.banco.pj.servico.impl.AberturaContaValidador;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
-import com.banco.pj.servico.ServicoContaPJ;
+import com.banco.pj.servico.impl.ServicoContaPJ;
 
 import java.math.BigDecimal;
 

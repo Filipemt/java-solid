@@ -1,8 +1,8 @@
-package com.banco.pj.servico;
+package com.banco.pj.servico.impl;
 
 import com.banco.pj.dominio.ContaMEI;
 import com.banco.pj.dominio.ContaPJ;
-import com.banco.pj.dominio.TipoEmpresa;
+import com.banco.pj.dominio.enums.TipoEmpresa;
 
 import java.math.BigDecimal;
 

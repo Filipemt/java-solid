@@ -1,8 +1,12 @@
-package com.banco.pj.servico;
+package com.banco.pj.servico.impl;
 
 import com.banco.pj.dominio.*;
 import com.banco.pj.dominio.CondicoesEmprestimo;
+import com.banco.pj.dominio.enums.TipoEmpresa;
+import com.banco.pj.dominio.exceptions.ContaNaoEncontradaException;
+import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
 import com.banco.pj.infra.*;
+import com.banco.pj.servico.OperacoesContaPJ;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

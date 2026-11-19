@@ -1,6 +1,7 @@
-package com.banco.pj.servico;
+package com.banco.pj.servico.impl;
 
-import com.banco.pj.dominio.OperacaoInvalidaException;
+import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
+import com.banco.pj.servico.OperacoesContaPJ;
 
 import java.math.BigDecimal;
 

@@ -1,5 +1,8 @@
 package com.banco.pj.dominio;
 
+import com.banco.pj.dominio.enums.TipoEmpresa;
+import com.banco.pj.dominio.exceptions.SaldoInsuficienteException;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;

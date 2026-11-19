@@ -2,7 +2,7 @@ package com.banco.pj.servico;
 
 import com.banco.pj.dominio.ContaPJ;
 import com.banco.pj.dominio.Emprestimo;
-import com.banco.pj.dominio.TipoEmpresa;
+import com.banco.pj.dominio.enums.TipoEmpresa;
 
 import java.math.BigDecimal;
 

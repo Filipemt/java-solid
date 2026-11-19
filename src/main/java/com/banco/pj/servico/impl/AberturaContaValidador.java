@@ -1,7 +1,7 @@
-package com.banco.pj.servico;
+package com.banco.pj.servico.impl;
 
-import com.banco.pj.dominio.OperacaoInvalidaException;
-import com.banco.pj.dominio.TipoEmpresa;
+import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
+import com.banco.pj.dominio.enums.TipoEmpresa;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.infra.ValidadorCnpj;
 

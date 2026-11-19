@@ -1,4 +1,4 @@
-package com.banco.pj.dominio;
+package com.banco.pj.dominio.exceptions;
 
 public class OperacaoInvalidaException extends RuntimeException {
     public OperacaoInvalidaException(String mensagem) {
