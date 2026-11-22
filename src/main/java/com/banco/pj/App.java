@@ -2,6 +2,8 @@ package com.banco.pj;
 
 import com.banco.pj.dominio.Auditoria;
 import com.banco.pj.dominio.enums.TipoEmpresa;
+import com.banco.pj.infra.EnviadorEmail;
+import com.banco.pj.infra.EnviadorSms;
 import com.banco.pj.servico.impl.AberturaContaValidador;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.servico.impl.ServicoContaPJ;
@@ -13,8 +15,10 @@ public class App {
         RepositorioContasEmMemoria repositorio = new RepositorioContasEmMemoria();
         AberturaContaValidador aberturaContaValidador = new AberturaContaValidador(repositorio);
         Auditoria auditoriaObject = new Auditoria();
+        EnviadorEmail email = new EnviadorEmail();
+        EnviadorSms sms = new EnviadorSms();
 
-        ServicoContaPJ servico = new ServicoContaPJ(aberturaContaValidador, repositorio, auditoriaObject);
+        ServicoContaPJ servico = new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject);
 
         servico.abrirConta("11.444.777/0001-61", "Padaria Pao Quente", TipoEmpresa.ME,
                 "contato@paoquente.com.br", "61999990000", new BigDecimal("15000.00"));

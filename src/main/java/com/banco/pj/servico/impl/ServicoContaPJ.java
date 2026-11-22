@@ -10,27 +10,23 @@ import com.banco.pj.servico.OperacoesContaPJ;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ServicoContaPJ implements OperacoesContaPJ {
 
     private final RepositorioContasEmMemoria repositorio;
-
-    private final EnviadorEmail email = new EnviadorEmail();
-    private final EnviadorSms sms = new EnviadorSms();
-
+    private final EnviadorEmail email;
+    private final EnviadorSms sms;
     private final AberturaContaValidador contaValidador;
     private final Auditoria auditoriaObject;
 
-    public ServicoContaPJ(AberturaContaValidador contaValidador, RepositorioContasEmMemoria repositorio, Auditoria auditoriaObject) {
-        this.contaValidador = contaValidador;
+    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms, AberturaContaValidador contaValidador, Auditoria auditoriaObject) {
         this.repositorio = repositorio;
+        this.email = email;
+        this.sms = sms;
+        this.contaValidador = contaValidador;
         this.auditoriaObject = auditoriaObject;
     }
-    // ------------------------------------------------------------------
-    // Abertura / encerramento
-    // ------------------------------------------------------------------
 
     @Override
     public ContaPJ abrirConta(String cnpj, String razaoSocial, TipoEmpresa tipo, String emailContato, String telefone, BigDecimal depositoInicial) {

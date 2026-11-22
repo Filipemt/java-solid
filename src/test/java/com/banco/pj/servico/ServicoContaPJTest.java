@@ -5,6 +5,8 @@ import com.banco.pj.dominio.enums.TipoEmpresa;
 import com.banco.pj.dominio.exceptions.ContaNaoEncontradaException;
 import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
 import com.banco.pj.dominio.exceptions.SaldoInsuficienteException;
+import com.banco.pj.infra.EnviadorEmail;
+import com.banco.pj.infra.EnviadorSms;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.servico.impl.AberturaContaValidador;
 import com.banco.pj.servico.impl.CaixaEletronicoPJ;
@@ -42,10 +44,13 @@ class ServicoContaPJTest {
 
     ServicoContaPJ criarServico() {
         RepositorioContasEmMemoria repositorio = new RepositorioContasEmMemoria();
-        AberturaContaValidador validador = new AberturaContaValidador(repositorio);
-        Auditoria auditoria = new Auditoria();
+        AberturaContaValidador aberturaContaValidador = new AberturaContaValidador(repositorio);
+        Auditoria auditoriaObject = new Auditoria();
+        EnviadorEmail email = new EnviadorEmail();
+        EnviadorSms sms = new EnviadorSms();
 
-        return new ServicoContaPJ(validador, repositorio, auditoria);
+
+        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject);
     }
 
     // ---------------- helpers ----------------
