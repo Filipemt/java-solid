@@ -7,6 +7,7 @@ import com.banco.pj.infra.EnviadorSms;
 import com.banco.pj.servico.impl.AberturaContaValidador;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.servico.impl.ServicoContaPJ;
+import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 
 import java.math.BigDecimal;
 
@@ -18,7 +19,7 @@ public class App {
         EnviadorEmail email = new EnviadorEmail();
         EnviadorSms sms = new EnviadorSms();
 
-        ServicoContaPJ servico = new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject);
+        ServicoContaPJ servico = new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao());
 
         servico.abrirConta("11.444.777/0001-61", "Padaria Pao Quente", TipoEmpresa.ME,
                 "contato@paoquente.com.br", "61999990000", new BigDecimal("15000.00"));

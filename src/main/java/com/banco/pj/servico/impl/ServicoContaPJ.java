@@ -7,6 +7,8 @@ import com.banco.pj.dominio.exceptions.ContaNaoEncontradaException;
 import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
 import com.banco.pj.infra.*;
 import com.banco.pj.servico.OperacoesContaPJ;
+import com.banco.pj.servico.PoliticaTarifacao;
+import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -19,13 +21,15 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     private final EnviadorSms sms;
     private final AberturaContaValidador contaValidador;
     private final Auditoria auditoriaObject;
+    private final SeletorPoliticaTarifacao seletorTarifacao;
 
-    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms, AberturaContaValidador contaValidador, Auditoria auditoriaObject) {
+    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms, AberturaContaValidador contaValidador, Auditoria auditoriaObject, SeletorPoliticaTarifacao seletorTarifacao) {
         this.repositorio = repositorio;
         this.email = email;
         this.sms = sms;
         this.contaValidador = contaValidador;
         this.auditoriaObject = auditoriaObject;
+        this.seletorTarifacao = seletorTarifacao;
     }
 
     @Override
@@ -86,9 +90,7 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         ContaPJ conta = buscarAtiva(cnpj);
         BigDecimal v = valorPositivo(valor);
 
-        BigDecimal tarifa = BigDecimal.ZERO;
-        tarifa = DeterminarTarifa.executarTarifaOperacao(conta, tarifa);
-        tarifa = normalizar(tarifa);
+        BigDecimal tarifa = normalizar(seletorTarifacao.para(conta).calcularTarifaOperacao());
 
         BigDecimal total = v.add(tarifa);
         conta.validarSaldo(total);
@@ -139,13 +141,23 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         auditoriaObject.registrar("TRANSFERENCIA|" + tipo + "|" + origem.getCnpj() + "|" + destino.getCnpj() + "|" + valoredPositivo.toPlainString());
     }
 
-    private static BigDecimal obterTarifaTransferencia(String tipoTransferencia, String tipo, ContaPJ origem, BigDecimal valoredPositivo) {
+    private BigDecimal obterTarifaTransferencia(String tipoTransferencia, String tipo, ContaPJ origem, BigDecimal valoredPositivo) {
+        PoliticaTarifacao politica = seletorTarifacao.para(origem);
         return switch (tipo) {
-            case "PIX" -> DeterminarTarifa.executarTarifaPix(origem, valoredPositivo);
-            case "TED" -> DeterminarTarifa.executarTarifaTed(origem);
+            case "PIX" -> {
+                validarLimitePix(valoredPositivo, politica);
+                yield BigDecimal.ZERO;
+            }
+            case "TED" -> politica.calcularTarifaTed();
             case "INTERNA" -> BigDecimal.ZERO;
             default -> throw new OperacaoInvalidaException("Tipo de transferencia desconhecido: " + tipoTransferencia);
         };
+    }
+
+    private static void validarLimitePix(BigDecimal valor, PoliticaTarifacao politica) {
+        if (valor.compareTo(politica.limitePix()) > 0) {
+            throw new OperacaoInvalidaException("Valor acima do limite de PIX");
+        }
     }
 
     private void validarAntiFraude(BigDecimal valoredPositivo, ContaPJ origem) {
@@ -169,8 +181,7 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         BigDecimal valoredPositivo = valorPositivo(valor);
         validarCodigoBarra(codigoBarras);
 
-        BigDecimal tarifa = DeterminarTarifa.executarTarifaBoleto(conta);
-        tarifa = normalizar(tarifa);
+        BigDecimal tarifa = normalizar(seletorTarifacao.para(conta).calcularTarifaBoleto());
 
         conta.validarSaldo(valoredPositivo.add(tarifa));
 
@@ -330,9 +341,7 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     public BigDecimal cobrarTarifaMensal(String cnpj) {
         ContaPJ conta = buscarAtiva(cnpj);
 
-        BigDecimal tarifa = BigDecimal.ZERO;
-        tarifa = DeterminarTarifa.executarTarifaMensal(conta, tarifa);
-        tarifa = normalizar(tarifa);
+        BigDecimal tarifa = normalizar(seletorTarifacao.para(conta).calcularTarifaMensal());
 
         if (tarifa.signum() > 0) {
             conta.debitar(tarifa);

@@ -1,12 +1,14 @@
 package com.banco.pj.servico;
 
-import com.banco.pj.dominio.ContaPJ;
-
 import java.math.BigDecimal;
 
+/**
+ * Strategy: cada tipo de empresa tem sua propria politica de tarifas e limites.
+ */
 public interface PoliticaTarifacao {
-    BigDecimal calcularTarifaMensal(ContaPJ conta, BigDecimal tarifa);
-    BigDecimal calcularTarifaOperacao(ContaPJ conta, BigDecimal tarifaBase);
-    BigDecimal calcularTarifaTed(ContaPJ origem);
-    BigDecimal calcularTarifaBoleto(ContaPJ conta);
+    BigDecimal calcularTarifaMensal();
+    BigDecimal calcularTarifaOperacao();
+    BigDecimal calcularTarifaTed();
+    BigDecimal calcularTarifaBoleto();
+    BigDecimal limitePix();
 }

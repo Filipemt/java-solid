@@ -11,6 +11,7 @@ import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.servico.impl.AberturaContaValidador;
 import com.banco.pj.servico.impl.CaixaEletronicoPJ;
 import com.banco.pj.servico.impl.ServicoContaPJ;
+import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -50,7 +51,7 @@ class ServicoContaPJTest {
         EnviadorSms sms = new EnviadorSms();
 
 
-        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject);
+        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao());
     }
 
     // ---------------- helpers ----------------
