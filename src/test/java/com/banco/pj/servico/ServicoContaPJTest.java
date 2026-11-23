@@ -10,6 +10,7 @@ import com.banco.pj.infra.EnviadorSms;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.servico.impl.AberturaContaValidador;
 import com.banco.pj.servico.impl.CaixaEletronicoPJ;
+import com.banco.pj.servico.impl.PoliticaEmprestimoImpl;
 import com.banco.pj.servico.impl.ServicoContaPJ;
 import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,9 +50,10 @@ class ServicoContaPJTest {
         Auditoria auditoriaObject = new Auditoria();
         EnviadorEmail email = new EnviadorEmail();
         EnviadorSms sms = new EnviadorSms();
+        PoliticaEmprestimo politicaEmprestimo = new PoliticaEmprestimoImpl();
 
 
-        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao());
+        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo);
     }
 
     // ---------------- helpers ----------------

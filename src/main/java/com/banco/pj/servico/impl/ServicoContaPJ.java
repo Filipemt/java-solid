@@ -6,7 +6,9 @@ import com.banco.pj.dominio.enums.TipoEmpresa;
 import com.banco.pj.dominio.exceptions.ContaNaoEncontradaException;
 import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
 import com.banco.pj.infra.*;
+import com.banco.pj.dominio.CondicoesLimiteChequeEspecial;
 import com.banco.pj.servico.OperacoesContaPJ;
+import com.banco.pj.servico.PoliticaEmprestimo;
 import com.banco.pj.servico.PoliticaTarifacao;
 import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 
@@ -22,14 +24,16 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     private final AberturaContaValidador contaValidador;
     private final Auditoria auditoriaObject;
     private final SeletorPoliticaTarifacao seletorTarifacao;
+    private final PoliticaEmprestimo politicaEmprestimo;
 
-    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms, AberturaContaValidador contaValidador, Auditoria auditoriaObject, SeletorPoliticaTarifacao seletorTarifacao) {
+    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms, AberturaContaValidador contaValidador, Auditoria auditoriaObject, SeletorPoliticaTarifacao seletorTarifacao, PoliticaEmprestimo politicaEmprestimo) {
         this.repositorio = repositorio;
         this.email = email;
         this.sms = sms;
         this.contaValidador = contaValidador;
         this.auditoriaObject = auditoriaObject;
         this.seletorTarifacao = seletorTarifacao;
+        this.politicaEmprestimo = politicaEmprestimo;
     }
 
     @Override
@@ -215,11 +219,11 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         BigDecimal valoredPositivo = valorPositivo(valor);
         validarPrazoEmprestimo(meses);
 
-        CondicoesEmprestimo condicoes = CondicoesEmprestimo.paraTipoEmpresa(conta.getTipo());
-        validarElegibilidade(valoredPositivo, condicoes, conta);
-        validarScore(condicoes, conta);
+        CondicoesEmprestimo condicoesEmprestimo = politicaEmprestimo.determinarCondicoesEmprestimo(conta.getTipo());
+        validarElegibilidade(valoredPositivo, condicoesEmprestimo, conta);
+        validarScore(condicoesEmprestimo, conta);
 
-        Emprestimo emprestimo = Emprestimo.calcular(valoredPositivo, meses, condicoes.taxa());
+        Emprestimo emprestimo = Emprestimo.calcular(valoredPositivo, meses, condicoesEmprestimo.taxa());
         efetivarEmprestimo(meses, conta, emprestimo, valoredPositivo);
 
         notificarEmprestimoAprovado(conta, valoredPositivo);
