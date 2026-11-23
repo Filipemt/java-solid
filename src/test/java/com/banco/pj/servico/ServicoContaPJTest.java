@@ -8,10 +8,7 @@ import com.banco.pj.dominio.exceptions.SaldoInsuficienteException;
 import com.banco.pj.infra.EnviadorEmail;
 import com.banco.pj.infra.EnviadorSms;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
-import com.banco.pj.servico.impl.AberturaContaValidador;
-import com.banco.pj.servico.impl.CaixaEletronicoPJ;
-import com.banco.pj.servico.impl.PoliticaEmprestimoImpl;
-import com.banco.pj.servico.impl.ServicoContaPJ;
+import com.banco.pj.servico.impl.*;
 import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -51,9 +48,10 @@ class ServicoContaPJTest {
         EnviadorEmail email = new EnviadorEmail();
         EnviadorSms sms = new EnviadorSms();
         PoliticaEmprestimo politicaEmprestimo = new PoliticaEmprestimoImpl();
+        PoliticaChequeEspecial politicaChequeEspecial = new PoliticaChequeEspecialImpl();
 
 
-        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo);
+        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo, politicaChequeEspecial);
     }
 
     // ---------------- helpers ----------------

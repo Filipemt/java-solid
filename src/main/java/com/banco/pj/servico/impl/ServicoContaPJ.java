@@ -8,6 +8,7 @@ import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
 import com.banco.pj.infra.*;
 import com.banco.pj.dominio.CondicoesLimiteChequeEspecial;
 import com.banco.pj.servico.OperacoesContaPJ;
+import com.banco.pj.servico.PoliticaChequeEspecial;
 import com.banco.pj.servico.PoliticaEmprestimo;
 import com.banco.pj.servico.PoliticaTarifacao;
 import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
@@ -25,8 +26,9 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     private final Auditoria auditoriaObject;
     private final SeletorPoliticaTarifacao seletorTarifacao;
     private final PoliticaEmprestimo politicaEmprestimo;
+    private final PoliticaChequeEspecial politicaChequeEspecial;
 
-    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms, AberturaContaValidador contaValidador, Auditoria auditoriaObject, SeletorPoliticaTarifacao seletorTarifacao, PoliticaEmprestimo politicaEmprestimo) {
+    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms, AberturaContaValidador contaValidador, Auditoria auditoriaObject, SeletorPoliticaTarifacao seletorTarifacao, PoliticaEmprestimo politicaEmprestimo, PoliticaChequeEspecial politicaChequeEspecial) {
         this.repositorio = repositorio;
         this.email = email;
         this.sms = sms;
@@ -34,6 +36,7 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         this.auditoriaObject = auditoriaObject;
         this.seletorTarifacao = seletorTarifacao;
         this.politicaEmprestimo = politicaEmprestimo;
+        this.politicaChequeEspecial = politicaChequeEspecial;
     }
 
     @Override
@@ -274,8 +277,8 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         ContaPJ conta = buscarAtiva(cnpj);
         validarContaElegivelAChequeEspecial(conta);
         BigDecimal limite = validarNovoLimite(novoLimite, conta);
-        CondicoesLimiteChequeEspecial condicoes = CondicoesLimiteChequeEspecial.paraTipoEmpresa(conta.getTipo());
-        validarLimiteMaximo(limite, condicoes);
+        CondicoesLimiteChequeEspecial condicaoChequeEspecial = politicaChequeEspecial.determinarCondicoesLimiteChequeEspecial(conta.getTipo());
+        validarLimiteMaximo(limite, condicaoChequeEspecial);
 
         efetivarAumentoLimite(conta, limite);
         notificarLimiteAlterado(conta, limite);

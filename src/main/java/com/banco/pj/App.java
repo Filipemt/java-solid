@@ -4,9 +4,11 @@ import com.banco.pj.dominio.Auditoria;
 import com.banco.pj.dominio.enums.TipoEmpresa;
 import com.banco.pj.infra.EnviadorEmail;
 import com.banco.pj.infra.EnviadorSms;
+import com.banco.pj.servico.PoliticaChequeEspecial;
 import com.banco.pj.servico.PoliticaEmprestimo;
 import com.banco.pj.servico.impl.AberturaContaValidador;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
+import com.banco.pj.servico.impl.PoliticaChequeEspecialImpl;
 import com.banco.pj.servico.impl.PoliticaEmprestimoImpl;
 import com.banco.pj.servico.impl.ServicoContaPJ;
 import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
@@ -21,8 +23,9 @@ public class App {
         EnviadorEmail email = new EnviadorEmail();
         EnviadorSms sms = new EnviadorSms();
         PoliticaEmprestimo politicaEmprestimo = new PoliticaEmprestimoImpl();
+        PoliticaChequeEspecial politicaChequeEspecial = new PoliticaChequeEspecialImpl();
 
-        ServicoContaPJ servico = new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo);
+        ServicoContaPJ servico = new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo, politicaChequeEspecial);
 
         servico.abrirConta("11.444.777/0001-61", "Padaria Pao Quente", TipoEmpresa.ME,
                 "contato@paoquente.com.br", "61999990000", new BigDecimal("15000.00"));
