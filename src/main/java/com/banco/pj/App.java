@@ -11,6 +11,7 @@ import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.servico.impl.PoliticaChequeEspecialImpl;
 import com.banco.pj.servico.impl.PoliticaEmprestimoImpl;
 import com.banco.pj.servico.impl.ServicoContaPJ;
+import com.banco.pj.servico.impl.strategy.SeletorGeracaoExtrato;
 import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 
 import java.math.BigDecimal;
@@ -25,7 +26,7 @@ public class App {
         PoliticaEmprestimo politicaEmprestimo = new PoliticaEmprestimoImpl();
         PoliticaChequeEspecial politicaChequeEspecial = new PoliticaChequeEspecialImpl();
 
-        ServicoContaPJ servico = new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo, politicaChequeEspecial);
+        ServicoContaPJ servico = new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo, politicaChequeEspecial, SeletorGeracaoExtrato.padrao());
 
         servico.abrirConta("11.444.777/0001-61", "Padaria Pao Quente", TipoEmpresa.ME,
                 "contato@paoquente.com.br", "61999990000", new BigDecimal("15000.00"));

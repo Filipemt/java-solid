@@ -3,14 +3,13 @@ package com.banco.pj.servico.impl;
 import com.banco.pj.dominio.*;
 import com.banco.pj.dominio.CondicoesEmprestimo;
 import com.banco.pj.dominio.enums.TipoEmpresa;
+import com.banco.pj.dominio.enums.TipoExtrato;
 import com.banco.pj.dominio.exceptions.ContaNaoEncontradaException;
 import com.banco.pj.dominio.exceptions.OperacaoInvalidaException;
 import com.banco.pj.infra.*;
 import com.banco.pj.dominio.CondicoesLimiteChequeEspecial;
-import com.banco.pj.servico.OperacoesContaPJ;
-import com.banco.pj.servico.PoliticaChequeEspecial;
-import com.banco.pj.servico.PoliticaEmprestimo;
-import com.banco.pj.servico.PoliticaTarifacao;
+import com.banco.pj.servico.*;
+import com.banco.pj.servico.impl.strategy.SeletorGeracaoExtrato;
 import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 
 import java.math.BigDecimal;
@@ -27,8 +26,12 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     private final SeletorPoliticaTarifacao seletorTarifacao;
     private final PoliticaEmprestimo politicaEmprestimo;
     private final PoliticaChequeEspecial politicaChequeEspecial;
+    private final SeletorGeracaoExtrato seletorGeracaoExtrato;
 
-    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms, AberturaContaValidador contaValidador, Auditoria auditoriaObject, SeletorPoliticaTarifacao seletorTarifacao, PoliticaEmprestimo politicaEmprestimo, PoliticaChequeEspecial politicaChequeEspecial) {
+    public ServicoContaPJ(RepositorioContasEmMemoria repositorio, EnviadorEmail email, EnviadorSms sms,
+                          AberturaContaValidador contaValidador, Auditoria auditoriaObject,
+                          SeletorPoliticaTarifacao seletorTarifacao, PoliticaEmprestimo politicaEmprestimo,
+                          PoliticaChequeEspecial politicaChequeEspecial, SeletorGeracaoExtrato seletorGeracaoExtrato) {
         this.repositorio = repositorio;
         this.email = email;
         this.sms = sms;
@@ -37,6 +40,7 @@ public class ServicoContaPJ implements OperacoesContaPJ {
         this.seletorTarifacao = seletorTarifacao;
         this.politicaEmprestimo = politicaEmprestimo;
         this.politicaChequeEspecial = politicaChequeEspecial;
+        this.seletorGeracaoExtrato = seletorGeracaoExtrato;
     }
 
     @Override
@@ -320,28 +324,8 @@ public class ServicoContaPJ implements OperacoesContaPJ {
     @Override
     public String gerarExtrato(String cnpj, String formato) {
         ContaPJ conta = buscarAtiva(cnpj);
-        validarFormatoObrigatorio(formato);
-        String formatoNormalizado = normalizarFormato(formato);
-        validarFormatoSuportado(formatoNormalizado, formato);
-        return ExtratoGerado.paraFormato(formatoNormalizado, conta).conteudo();
-    }
-
-    private static void validarFormatoObrigatorio(String formato) {
-        if (formato == null) {
-            throw new OperacaoInvalidaException("Formato obrigatorio");
-        }
-    }
-
-    private static String normalizarFormato(String formato) {
-        return formato.trim().toUpperCase();
-    }
-
-    private static void validarFormatoSuportado(String formatoNormalizado, String formatoOriginal) {
-        if (!formatoNormalizado.equals("TXT")
-                && !formatoNormalizado.equals("CSV")
-                && !formatoNormalizado.equals("JSON")) {
-            throw new OperacaoInvalidaException("Formato de extrato nao suportado: " + formatoOriginal);
-        }
+        TipoExtrato tipoExtrato = TipoExtrato.deFormato(formato);
+        return seletorGeracaoExtrato.getGeradorExtrato(tipoExtrato).gerarExtrato(conta);
     }
 
     @Override

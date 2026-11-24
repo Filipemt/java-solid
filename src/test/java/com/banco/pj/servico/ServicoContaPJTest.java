@@ -9,6 +9,7 @@ import com.banco.pj.infra.EnviadorEmail;
 import com.banco.pj.infra.EnviadorSms;
 import com.banco.pj.infra.RepositorioContasEmMemoria;
 import com.banco.pj.servico.impl.*;
+import com.banco.pj.servico.impl.strategy.SeletorGeracaoExtrato;
 import com.banco.pj.servico.impl.strategy.SeletorPoliticaTarifacao;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -51,7 +52,7 @@ class ServicoContaPJTest {
         PoliticaChequeEspecial politicaChequeEspecial = new PoliticaChequeEspecialImpl();
 
 
-        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo, politicaChequeEspecial);
+        return new ServicoContaPJ(repositorio, email, sms, aberturaContaValidador, auditoriaObject, SeletorPoliticaTarifacao.padrao(), politicaEmprestimo, politicaChequeEspecial, SeletorGeracaoExtrato.padrao());
     }
 
     // ---------------- helpers ----------------
